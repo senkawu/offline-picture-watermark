@@ -4,330 +4,832 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
     <title>离线图片水印工具</title>
-    <style>
-        #graph {
-            display: grid;
-            grid-gap: 10px;
-            grid-template-columns: 1fr 1fr;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 配置Tailwind自定义颜色和字体 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        dark: '#1E293B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
         }
-
-        p,
-        article {
-            margin: 0 0 20px 0
-        }
-
-        article {
-            font-size: 14px;
-            color: #777
-        }
-
-        .align-center-box {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        label {
-            color: blue;
-            font-size: 17px;
-            margin-right: 10px;
-        }
-
-        p label {
-            color: black;
-            display: inline-block;
-            font-size: 15px
-        }
-
-        input#text {
-            width: 100%;
-            box-sizing: border-box;
-            font-size: 16px;
-            margin-bottom: 10px
-        }
-
-        input[type=range] {
-            min-width: 200px;
-            height: 18px;
-            vertical-align: text-bottom;
-            flex: 1;
-        }
-
-        canvas {
-            box-sizing: border-box;
-            width: 100%;
-            border: 1px dashed #AAA;
-            cursor: pointer
-        }
-
-        .label {
-            margin-right: 30px;
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .shadow-soft {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            }
+            .transition-custom {
+                transition: all 0.3s ease;
+            }
+            .canvas-container {
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 200px;
+            }
+            .preview-canvas {
+                max-width: 100%;
+                max-height: 400px; /* 限制最大高度，确保在预览区域内可见 */
+                object-fit: contain;
+                cursor: zoom-in;
+            }
+            .modal-backdrop {
+                backdrop-filter: blur(3px);
+                -webkit-backdrop-filter: blur(3px);
+            }
+            .zoom-controls {
+                user-select: none;
+            }
         }
     </style>
 </head>
-<div id="container">
-    <h1>离线图片水印工具</h1>
-    <article>
-        安全地为你的图片加水印，无任何网络请求，利用浏览器 Api 实现水印，特别适合各种敏感证件（身份证，驾照，护照等）。
-        <a href="https://github.com/sleepybear1113/offline-picture-watermark" target="_blank">Github地址</a>
-    </article>
+<body class="bg-gray-50 font-sans text-gray-800 min-h-screen">
+    <div id="container" class="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        <!-- 标题区域 -->
+        <header class="text-center mb-10">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-dark mb-3 flex items-center justify-center">
+                <i class="fa fa-picture-o text-primary mr-3"></i>
+                离线图片水印工具
+            </h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+                安全地为你的图片加水印，无任何网络请求，利用浏览器API实现水印，特别适合各种敏感证件（身份证，驾照，护照等）。
+            </p>
+            <a href="https://cdn.seenke.com:443/https/github.com/sleepybear1113/offline-picture-watermark" 
+               target="_blank" 
+               class="inline-flex items-center mt-4 text-primary hover:text-primary/80 transition-custom font-medium">
+                <i class="fa fa-github mr-2"></i> Github地址
+            </a>
+        </header>
 
-    <div class="align-center-box">
-        <label for="image">第一步：先选择本地图片(可多选)</label>
-        <input type="file" id="image" autocomplete="off" multiple>
-        <br>
-        <label for="text">第二步：输入需要打水印的文字</label>
-        <input style="flex: 1; margin-bottom: 0" id="text" autocomplete="off" value="这里是水印文字">
+        <!-- 主内容区域 -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左侧控制面板 -->
+            <div class="lg:col-span-1 bg-white rounded-xl shadow-soft p-6">
+                <!-- 图片上传区域 -->
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fa fa-upload text-primary mr-2"></i> 图片上传
+                    </h2>
+                    <label for="image" class="block border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-custom">
+                        <i class="fa fa-picture-o text-3xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-600">点击或拖拽图片到此处</p>
+                        <p class="text-sm text-gray-500 mt-1">支持 PNG, JPG, WebP 格式</p>
+                        <input type="file" id="image" autocomplete="off" multiple class="hidden">
+                    </label>
+                </div>
+
+                <!-- 水印文字设置 -->
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fa fa-font text-primary mr-2"></i> 水印文字
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="text" class="block text-sm font-medium text-gray-700 mb-1">水印内容</label>
+                            <input id="text" autocomplete="off" value="这里是水印文字" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-custom">
+                        </div>
+                        
+                        <div>
+                            <label for="fontSelect" class="block text-sm font-medium text-gray-700 mb-1">字体选择</label>
+                            <select id="fontSelect" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-custom">
+                            </select>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-4 pt-2">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="bold" checked class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">加粗</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="italic" class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">斜体</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="xx" checked class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">交错</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 样式设置 -->
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fa fa-sliders text-primary mr-2"></i> 样式设置
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="color" class="text-sm font-medium text-gray-700">颜色</label>
+                                <span id="label-color" class="text-sm text-gray-500"></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="color" id="color" value="#FFFFFF" 
+                                       class="w-10 h-10 p-0 border-0 rounded cursor-pointer">
+                                <div class="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="color-preview" class="h-full w-full" style="background-color: #FFFFFF;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="alpha" class="text-sm font-medium text-gray-700">不透明度</label>
+                                <span id="label-alpha" class="text-sm text-gray-500"></span>
+                            </div>
+                            <input type="range" id="alpha" min="0" max="1" step="0.01" autocomplete="off" value="0.25"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="size" class="text-sm font-medium text-gray-700">字号</label>
+                                <span id="label-size" class="text-sm text-gray-500"></span>
+                            </div>
+                            <input type="range" id="size" min="0.1" max="5" step="0.01" autocomplete="off" value="0.8"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="radio" class="text-sm font-medium text-gray-700">角度</label>
+                                <span id="label-radio" class="text-sm text-gray-500"></span>
+                            </div>
+                            <input type="range" id="radio" min="-180" max="180" step="1" autocomplete="off" value="-30"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="marginHorizon" class="text-sm font-medium text-gray-700">左右间隔</label>
+                                <span id="label-marginHorizon" class="text-sm text-gray-500"></span>
+                            </div>
+                            <input type="range" id="marginHorizon" min="-5" max="12" step="0.1" autocomplete="off" value="1.5"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="marginVertical" class="text-sm font-medium text-gray-700">上下间隔</label>
+                                <span id="label-marginVertical" class="text-sm text-gray-500"></span>
+                            </div>
+                            <input type="range" id="marginVertical" min="-5" max="12" step="0.1" autocomplete="off" value="1.5"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 下载设置 -->
+                <div>
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fa fa-download text-primary mr-2"></i> 下载设置
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 mb-2">图片格式</p>
+                            <div class="flex flex-wrap gap-4">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" value="image/png" name="pic-type" class="pic-type" checked 
+                                           class="form-radio h-5 w-5 text-primary focus:ring-primary">
+                                    <span class="ml-2 text-sm text-gray-700">PNG</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" value="image/jpeg" name="pic-type" class="pic-type"
+                                           class="form-radio h-5 w-5 text-primary focus:ring-primary">
+                                    <span class="ml-2 text-sm text-gray-700">JPEG</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" value="image/webp" name="pic-type" class="pic-type"
+                                           class="form-radio h-5 w-5 text-primary focus:ring-primary">
+                                    <span class="ml-2 text-sm text-gray-700">WebP</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="pic-quality-div" class="hidden">
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="pic-quality" class="text-sm font-medium text-gray-700">图像质量</label>
+                                <span id="label-pic-quality" class="text-sm text-gray-500"></span>
+                            </div>
+                            <input type="range" id="pic-quality" min="1" max="100" step="1" autocomplete="off" value="92"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        </div>
+                        
+                        <button onclick="downloadAllPic()" 
+                                class="w-full bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-lg transition-custom flex items-center justify-center">
+                            <i class="fa fa-download mr-2"></i> 下载全部图片
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧预览区域 -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-soft p-6 h-full">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fa fa-eye text-primary mr-2"></i> 预览与下载
+                    </h2>
+                    <p class="text-sm text-gray-500 mb-6">点击图片可查看原图并缩放，调整参数可实时预览效果</p>
+                    
+                    <div id="graph" class="grid grid-cols-1 md:grid-cols-2 gap-6 content-start min-h-[200px]">
+                        <!-- 图片预览将在这里显示 -->
+                        <div class="col-span-full flex items-center justify-center h-40 border-2 border-dashed border-gray-300 rounded-lg text-gray-400">
+                            <p class="text-center"><i class="fa fa-image text-3xl block mb-2"></i> 上传图片后将显示在这里</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>离线图片水印工具 &copy; 2023 | 所有操作均在本地完成，保护您的隐私</p>
+        </footer>
     </div>
 
-    <p class="align-center-box">
-        <label for="color">颜色</label>
-        <input style="min-width: 30px; max-width: 100px" type="color" id="color" value="#FFFFFF">
-        <label class="label" id="label-color"></label>
-
-        <br>
-        <label for="fontSelect">字体</label>
-        <select style="margin-right: 30px" id="fontSelect">
-        </select>
-
-        <br>
-        <label for="bold">加粗</label>
-        <input type="checkbox" style="margin-right: 30px" id="bold" checked>
-
-        <br>
-        <label for="italic">斜体</label>
-        <input type="checkbox" style="margin-right: 30px" id="italic">
-
-        <br>
-        <label for="xx">交错</label>
-        <input type="checkbox" style="margin-right: 30px" id="xx" checked>
-
-        <br>
-        <label for="alpha">不透明度</label>
-        <input type="range" id="alpha" min="0" max="1" step="0.01" autocomplete="off" value="0.25">
-        <label class="label" id="label-alpha"></label>
-
-        <br>
-        <label for="size">字号</label>
-        <input type="range" id="size" min="0.1" max="5" step="0.01" autocomplete="off" value="0.8">
-        <label class="label" id="label-size"></label>
-
-    </p>
-
-    <p class="align-center-box">
-        <label for="radio">角度</label>
-        <input type="range" id="radio" min="-180" max="180" step="1" autocomplete="off" value="-30">
-        <label class="label" id="label-radio"></label>
-
-        <br>
-        <label for="marginHorizon">左右间隔</label>
-        <input type="range" id="marginHorizon" min="-5" max="12" step="0.1" autocomplete="off" value="1.5">
-        <label class="label" id="label-marginHorizon"></label>
-
-        <br>
-        <label for="marginVertical">上下间隔</label>
-        <input type="range" id="marginVertical" min="-5" max="12" step="0.1" autocomplete="off" value="1.5">
-        <label class="label" id="label-marginVertical"></label>
-    </p>
-
-    <div>
-        <label for="text">第三步：点击图片进行单个图片下载</label>
-        <button onclick="downloadAllPic()">下载全部</button>
-        <label>
-            PNG格式
-            <input type="radio" value="image/png" name="pic-type" class="pic-type" checked>
-        </label>
-        <label>
-            JPEG格式
-            <input type="radio" value="image/jpeg" name="pic-type" class="pic-type">
-        </label>
-        <label>
-            Webp格式
-            <input type="radio" value="image/webp" name="pic-type" class="pic-type">
-        </label>
-
-        <span id="pic-quality-div" style="display: none">
-            <label for="pic-quality">图像质量</label>
-            <input type="range" id="pic-quality" min="1" max="100" step="1" autocomplete="off" value="92">
-            <label class="label" id="label-pic-quality"></label>
-        </span>
+    <!-- 原图预览模态框 -->
+    <div id="fullsize-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black/70 modal-backdrop" onclick="closeFullsizePreview()"></div>
+        <div class="relative bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="font-semibold text-lg" id="modal-title">图片预览</h3>
+                <button onclick="closeFullsizePreview()" class="text-gray-500 hover:text-gray-700 transition-custom">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-auto p-4 flex items-center justify-center relative">
+                <div id="fullsize-container" class="relative transition-transform duration-200">
+                    <canvas id="fullsize-canvas" class="max-w-full max-h-[70vh]"></canvas>
+                </div>
+                
+                <!-- 缩放控制 -->
+                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-4 shadow-md zoom-controls">
+                    <button onclick="zoomOut()" class="text-gray-700 hover:text-primary transition-custom">
+                        <i class="fa fa-search-minus text-xl"></i>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="zoom-level" min="1" max="100" step="1" value="100"
+                               class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        <span id="zoom-percentage" class="text-sm font-medium min-w-[40px] text-center">100%</span>
+                    </div>
+                    <button onclick="zoomIn()" class="text-gray-700 hover:text-primary transition-custom">
+                        <i class="fa fa-search-plus text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t flex justify-end gap-3">
+                <button onclick="closeFullsizePreview()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-custom">
+                    关闭
+                </button>
+                <button onclick="downloadCurrentImage()" class="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-custom flex items-center gap-2">
+                    <i class="fa fa-download"></i> 下载图片
+                </button>
+            </div>
+        </div>
     </div>
-
-    <p id="graph"></p>
 
     <script>
-        let canvas;
-        let $ = sel => document.querySelector(sel);
-        let inputItems = ['color', 'alpha', "marginHorizon", "marginVertical", 'size', 'radio', "xx", "bold", "italic", "pic-quality"];
-        let configInputSetting = {}; // 保存所有水印
-        let allCanvas = []; // 保存所有的canvas
+        // 确保DOM加载完成后再执行
+        document.addEventListener('DOMContentLoaded', function() {
+            let $ = sel => document.querySelector(sel);
+            let inputItems = ['color', 'alpha', "marginHorizon", "marginVertical", 'size', 'radio', "xx", "bold", "italic", "pic-quality"];
+            let configInputSetting = {}; // 保存所有水印配置
+            let allCanvas = []; // 保存所有的canvas
+            let currentPreviewIndex = -1; // 当前预览的图片索引
 
-        let image = $('#image');
-        let graph = $('#graph');
-        let dataURItoBlob = (dataURI, type) => {
-            let i, _i, _ref;
-            let binStr = atob((dataURI.split(','))[1]);
-            let len = binStr.length;
-            let arr = new Uint8Array(len);
-            for (i = _i = 0, _ref = len - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-                arr[i] = binStr.charCodeAt(i);
-            }
-            return new Blob([arr], {
-                type: type
-            });
-        };
+            let image = $('#image');
+            let graph = $('#graph');
+            let fullsizeModal = $('#fullsize-modal');
+            let fullsizeCanvas = $('#fullsize-canvas');
+            let zoomLevel = $('#zoom-level');
+            let zoomPercentage = $('#zoom-percentage');
+            let modalTitle = $('#modal-title');
+            
+            // 初始化状态
+            let initialPlaceholder = graph.innerHTML;
 
-        const fontOptions = ["Arial", "Helvetica", "Times New Roman", "Courier New", "Verdana", "Georgia", "Impact", "Tahoma", "Palatino", "Garamond", "Bookman", "Comic Sans MS", "Century Gothic", "Arial Black", "Lucida Console",
-            "幼圆", "新宋体", "文泉驿微米黑", "微软正黑体", "微软雅黑", "宋体", "思源宋体", "思源黑体", "苹方", "隶书", "楷体", "开源字体", "华文中宋", "华文中宋", "华文行楷", "华文行楷", "华文新魏", "华文新魏", "华文细黑", "华文宋体", "华文宋体", "华文隶书", "华文隶书", "华文楷体", "华文楷体", "华文琥珀", "华文琥珀", "华文黑体", "华文仿宋", "华文仿宋", "华文彩云", "黑体", "汉仪雅酷黑W", "汉仪小麦体", "汉仪尚魏手书W", "汉仪旗黑", "汉仪旗黑", "汉仪旗黑", "汉仪乐喵体简", "汉仪楷体", "汉仪家书简", "汉仪黑荔枝", "汉仪大宋简", "汉仪大黑简", "汉仪程行体", "汉仪PP体简", "仿宋",];
-        const selectElement = $("#fontSelect");
-        // 遍历字体选项数组
-        for (let i = 0; i < fontOptions.length; i++) {
-            const optionElement = document.createElement("option");
-            optionElement.value = fontOptions[i];
-            optionElement.textContent = fontOptions[i];
-            optionElement.style.fontFamily = fontOptions[i];
-            selectElement.appendChild(optionElement);
-        }
-
-        const redrawCanvas = (canvas, img) => {
-            // 重新设置canvas的宽高，会清空画布
-            let w = canvas.width;
-            let h = canvas.height;
-            canvas.width = w;
-            canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0);
-        };
-
-        const downloadCanvasAsImage = (canvas, fileName) => {
-            let type = configInputSetting["pic-type"] ? configInputSetting["pic-type"] : "image/png";
-            let link = document.createElement('a');
-            link.download = fileName + "_watermark." + type.split("/")[1];
-            let imageData = canvas.toDataURL(type, parseFloat($("#pic-quality").value) / 100);
-            let blob = dataURItoBlob(imageData, type);
-            link.href = URL.createObjectURL(blob);
-            graph.appendChild(link);
-            return setTimeout(function () {
-                link.click();
-                return graph.removeChild(link);
-            }, 10);
-        }
-        const downloadAllPic = async () => {
-            allCanvas.forEach(({canvas, img, fileName}) => {
-                downloadCanvasAsImage(canvas, fileName);
-            })
-        }
-        let readFile = file => {
-            if (file == null) {
-                return;
-            }
-            let fileReader = new FileReader;
-            fileReader.onload = function () {
-                let img = new Image;
-                img.onload = function () {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    let ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-
-                    allCanvas.push({img: img, canvas: canvas, fileName: file.name});
-
-                    drawText(canvas, img);
-                    graph.appendChild(canvas);
-
-                    return canvas.addEventListener('click', () => downloadCanvasAsImage(canvas, file.name));
-                };
-                return img.src = fileReader.result;
+            // 将dataURI转换为Blob对象
+            let dataURItoBlob = (dataURI, type) => {
+                let binStr = atob((dataURI.split(','))[1]);
+                let len = binStr.length;
+                let arr = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    arr[i] = binStr.charCodeAt(i);
+                }
+                return new Blob([arr], { type: type });
             };
-            return fileReader.readAsDataURL(file);
-        };
-        const makeStyle = () => {
-            let match = configInputSetting.color.value.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-            return 'rgba(' + (parseInt(match[1], 16)) + ',' + (parseInt(match[2], 16)) + ',' + (parseInt(match[3],
-                16)) + ',' + configInputSetting.alpha.value + ')';
-        };
 
-        const drawText = (canvas, img) => {
-            redrawCanvas(canvas, img);
-            if (canvas == null) {
-                return;
+            // 字体选项列表
+            const fontOptions = [
+                "Arial", "Helvetica", "Times New Roman", "Courier New", "Verdana", 
+                "Georgia", "Impact", "Tahoma", "Palatino", "Garamond", 
+                "幼圆", "新宋体", "微软雅黑", "宋体", "思源宋体", 
+                "思源黑体", "苹方", "隶书", "楷体", "黑体", "仿宋"
+            ];
+            
+            // 填充字体选择下拉框
+            const selectElement = $("#fontSelect");
+            for (let i = 0; i < fontOptions.length; i++) {
+                const optionElement = document.createElement("option");
+                optionElement.value = fontOptions[i];
+                optionElement.textContent = fontOptions[i];
+                optionElement.style.fontFamily = fontOptions[i];
+                selectElement.appendChild(optionElement);
+            }
+            // 默认选中微软雅黑
+            selectElement.value = "微软雅黑";
+
+            // 重新绘制画布（清除并重新绘制原始图像）
+            const redrawCanvas = (canvas, img) => {
+                let w = canvas.width;
+                let h = canvas.height;
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+            };
+
+            // 下载画布内容为图片
+            const downloadCanvasAsImage = (canvas, fileName) => {
+                // 使用原始canvas尺寸下载，确保完整
+                const originalCanvas = allCanvas.find(item => item.canvas === canvas).originalCanvas;
+                
+                let type = configInputSetting["pic-type"] ? configInputSetting["pic-type"] : "image/png";
+                let link = document.createElement('a');
+                link.download = fileName + "_watermark." + type.split("/")[1];
+                
+                // 根据格式设置质量参数
+                let quality = ("image/png" === type) ? 1 : parseFloat($("#pic-quality").value) / 100;
+                let imageData = originalCanvas.toDataURL(type, quality);
+                
+                let blob = dataURItoBlob(imageData, type);
+                link.href = URL.createObjectURL(blob);
+                
+                // 添加下载动画效果
+                const canvasContainer = canvas.parentElement;
+                canvasContainer.classList.add('scale-95', 'opacity-70');
+                
+                setTimeout(() => {
+                    link.click();
+                    canvasContainer.classList.remove('scale-95', 'opacity-70');
+                    URL.revokeObjectURL(link.href); // 释放资源
+                }, 200);
             }
 
-            let textSize = configInputSetting.size.value * Math.max(15, (Math.min(canvas.width, canvas.height)) / 25);
-            let textCtx = canvas.getContext('2d');
-            textCtx.fillStyle = makeStyle();
-
-            textCtx.font = ($("#bold").checked ? "bold " : "") + ($("#italic").checked ? "italic " : "") + textSize + "px " + $("#fontSelect").value;
-
-            let baseWidth = (textCtx.measureText('啊')).width;
-
-            let textWidth = (textCtx.measureText(configInputSetting.text.value)).width;
-            let xAdd = textWidth + configInputSetting.marginHorizon.value * baseWidth;
-            let yAdd = textWidth + configInputSetting.marginVertical.value * baseWidth;
-            xAdd = Math.max(xAdd, 10);
-            yAdd = Math.max(yAdd, 10);
-
-            let border = 500;
-            for (let i = -1 * border; i < canvas.width + border; i += xAdd) {
-                for (let j = -1 * border, jj = 0; j < canvas.height + border; j += yAdd, jj++) {
-                    textCtx.save();
-                    textCtx.translate(i + Math.ceil(jj % 2 === 0 ? xAdd / (configInputSetting.xx.checked ? 2 : 1) : 0), j);
-                    textCtx.rotate(configInputSetting.radio.value * Math.PI / 180);
-                    textCtx.fillText(configInputSetting.text.value, 0, 0);
-                    textCtx.restore();
+            // 下载当前预览的图片
+            window.downloadCurrentImage = () => {
+                if (currentPreviewIndex >= 0 && currentPreviewIndex < allCanvas.length) {
+                    const { canvas, fileName } = allCanvas[currentPreviewIndex];
+                    downloadCanvasAsImage(canvas, fileName);
                 }
             }
-        };
 
-        let picTypeInputs = document.getElementsByClassName("pic-type");
-        for (let i = 0; i < picTypeInputs.length; i++) {
-            let item = picTypeInputs[i];
-            item.addEventListener('change', () => {
-                let picQuality = $("#pic-quality-div");
-                picQuality.style.display = "none";
-                if (item.checked) {
-                    configInputSetting["pic-type"] = item.value;
-                    if ("image/webp" === item.value || "image/jpeg" === item.value) {
-                        picQuality.style.display = "";
+            // 下载所有图片
+            window.downloadAllPic = () => {
+                if (allCanvas.length === 0) {
+                    alert("请先上传图片");
+                    return;
+                }
+                
+                allCanvas.forEach(({canvas, fileName}, index) => {
+                    // 延迟下载，避免浏览器限制
+                    setTimeout(() => {
+                        downloadCanvasAsImage(canvas, fileName);
+                    }, index * 300);
+                });
+            }
+
+            // 创建预览用的Canvas（缩小版，保持比例）
+            const createPreviewCanvas = (originalCanvas) => {
+                const previewCanvas = document.createElement('canvas');
+                const ctx = previewCanvas.getContext('2d');
+                
+                // 设置最大预览尺寸
+                const maxWidth = 400;
+                const maxHeight = 400;
+                
+                // 计算缩放比例
+                const scale = Math.min(
+                    maxWidth / originalCanvas.width,
+                    maxHeight / originalCanvas.height,
+                    1 // 不放大图片
+                );
+                
+                // 设置预览Canvas尺寸
+                previewCanvas.width = originalCanvas.width * scale;
+                previewCanvas.height = originalCanvas.height * scale;
+                
+                // 绘制缩放后的内容
+                ctx.drawImage(originalCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+                
+                // 添加样式类
+                previewCanvas.className = 'preview-canvas';
+                
+                return previewCanvas;
+            };
+
+            // 打开原图预览
+            const openFullsizePreview = (index) => {
+                if (index < 0 || index >= allCanvas.length) return;
+                
+                currentPreviewIndex = index;
+                const { originalCanvas, fileName } = allCanvas[index];
+                
+                // 设置模态框标题
+                modalTitle.textContent = `图片预览: ${fileName}`;
+                
+                // 复制原始Canvas到全屏预览Canvas
+                fullsizeCanvas.width = originalCanvas.width;
+                fullsizeCanvas.height = originalCanvas.height;
+                fullsizeCanvas.getContext('2d').drawImage(originalCanvas, 0, 0);
+                
+                // 重置缩放
+                setZoomLevel(100);
+                
+                // 显示模态框
+                fullsizeModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // 防止背景滚动
+            };
+
+            // 关闭原图预览
+            window.closeFullsizePreview = () => {
+                fullsizeModal.classList.add('hidden');
+                document.body.style.overflow = ''; // 恢复背景滚动
+                currentPreviewIndex = -1;
+            };
+
+            // 设置缩放级别
+            const setZoomLevel = (level) => {
+                if (level < 1) level = 1;
+                if (level > 100) level = 100;
+                
+                zoomLevel.value = level;
+                zoomPercentage.textContent = `${level}%`;
+                
+                // 应用缩放变换
+                const fullsizeContainer = $('#fullsize-container');
+                fullsizeContainer.style.transform = `scale(${level / 100})`;
+            };
+
+            // 放大
+            window.zoomIn = () => {
+                let currentLevel = parseInt(zoomLevel.value);
+                setZoomLevel(currentLevel + 5);
+            };
+
+            // 缩小
+            window.zoomOut = () => {
+                let currentLevel = parseInt(zoomLevel.value);
+                setZoomLevel(currentLevel - 5);
+            };
+
+            // 读取并处理文件
+            let readFile = file => {
+                if (file == null) return;
+                
+                let fileReader = new FileReader;
+                fileReader.onload = function () {
+                    let img = new Image;
+                    img.onload = function () {
+                        // 创建原始尺寸的Canvas（用于处理和下载）
+                        const originalCanvas = document.createElement('canvas');
+                        originalCanvas.width = img.width;
+                        originalCanvas.height = img.height;
+                        let ctx = originalCanvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        // 创建预览用的Canvas（缩小版）
+                        const previewCanvas = createPreviewCanvas(originalCanvas);
+
+                        // 添加到画布数组
+                        const index = allCanvas.length;
+                        allCanvas.push({
+                            img: img, 
+                            canvas: previewCanvas,  // 预览用
+                            originalCanvas: originalCanvas,  // 原始尺寸，用于下载
+                            fileName: file.name
+                        });
+
+                        // 绘制水印（同时更新原始和预览Canvas）
+                        drawText(originalCanvas, img, previewCanvas);
+                        
+                        // 创建容器并添加到预览区域
+                        const canvasContainer = document.createElement('div');
+                        canvasContainer.className = 'relative group transition-custom rounded-lg overflow-hidden shadow-sm hover:shadow-md canvas-container';
+                        canvasContainer.dataset.index = index; // 存储索引值
+                        
+                        // 添加下载提示覆盖层
+                        const overlay = document.createElement('div');
+                        overlay.className = 'absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-custom flex items-center justify-center';
+                        overlay.innerHTML = '<i class="fa fa-search-plus text-white text-3xl"></i>';
+                        
+                        canvasContainer.appendChild(previewCanvas);
+                        canvasContainer.appendChild(overlay);
+                        
+                        // 为容器添加点击事件（修复核心：确保事件能被触发）
+                        canvasContainer.addEventListener('click', function() {
+                            const idx = parseInt(this.dataset.index);
+                            openFullsizePreview(idx);
+                        });
+                        
+                        // 清空初始占位符
+                        if (graph.innerHTML === initialPlaceholder) {
+                            graph.innerHTML = '';
+                        }
+                        
+                        graph.appendChild(canvasContainer);
+                    };
+                    img.src = fileReader.result;
+                };
+                fileReader.readAsDataURL(file);
+            };
+
+            // 创建水印样式
+            const makeStyle = () => {
+                let match = configInputSetting.color.value.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+                return 'rgba(' + 
+                       (parseInt(match[1], 16)) + ',' + 
+                       (parseInt(match[2], 16)) + ',' + 
+                       (parseInt(match[3], 16)) + ',' + 
+                       configInputSetting.alpha.value + ')';
+            };
+
+            // 绘制水印文字（同时更新原始和预览Canvas）
+            const drawText = (originalCanvas, img, previewCanvas) => {
+                // 重新绘制原始图像
+                redrawCanvas(originalCanvas, img);
+                
+                // 获取水印文本，为空时不绘制
+                const watermarkText = configInputSetting.text.value.trim();
+                if (!watermarkText) {
+                    // 更新预览
+                    updatePreviewCanvas(originalCanvas, previewCanvas);
+                    
+                    // 如果当前正在预览这张图，同步更新
+                    if (currentPreviewIndex !== -1) {
+                        const currentCanvas = allCanvas[currentPreviewIndex].originalCanvas;
+                        if (currentCanvas === originalCanvas) {
+                            fullsizeCanvas.getContext('2d').drawImage(originalCanvas, 0, 0);
+                        }
+                    }
+                    return;
+                }
+
+                // 计算文字大小（基于图像尺寸动态调整）
+                let textSize = configInputSetting.size.value * Math.max(15, (Math.min(originalCanvas.width, originalCanvas.height)) / 25);
+                
+                // 获取2D上下文并设置样式
+                let textCtx = originalCanvas.getContext('2d');
+                textCtx.fillStyle = makeStyle();
+                
+                // 设置字体样式（加粗、斜体、字体类型）
+                const fontWeight = $("#bold").checked ? "bold " : "";
+                const fontStyle = $("#italic").checked ? "italic " : "";
+                textCtx.font = `${fontWeight}${fontStyle}${textSize}px ${$("#fontSelect").value}`;
+
+                // 计算文字间距
+                let baseWidth = (textCtx.measureText('啊')).width;
+                let textWidth = (textCtx.measureText(watermarkText)).width;
+                let xAdd = textWidth + configInputSetting.marginHorizon.value * baseWidth;
+                let yAdd = textWidth + configInputSetting.marginVertical.value * baseWidth;
+                xAdd = Math.max(xAdd, 10);
+                yAdd = Math.max(yAdd, 10);
+
+                // 绘制水印网格
+                let border = 500; // 超出画布的绘制范围，确保边缘覆盖
+                for (let i = -border; i < originalCanvas.width + border; i += xAdd) {
+                    for (let j = -border, jj = 0; j < originalCanvas.height + border; j += yAdd, jj++) {
+                        textCtx.save();
+                        // 如果启用交错模式，奇数行偏移一半
+                        const offsetX = configInputSetting.xx.checked && jj % 2 === 0 ? xAdd / 2 : 0;
+                        textCtx.translate(i + offsetX, j);
+                        textCtx.rotate(configInputSetting.radio.value * Math.PI / 180);
+                        textCtx.fillText(watermarkText, 0, 0);
+                        textCtx.restore();
+                    }
+                }
+                
+                // 更新预览Canvas
+                updatePreviewCanvas(originalCanvas, previewCanvas);
+                
+                // 如果当前正在预览这张图，同步更新
+                if (currentPreviewIndex !== -1) {
+                    const currentCanvas = allCanvas[currentPreviewIndex].originalCanvas;
+                    if (currentCanvas === originalCanvas) {
+                        fullsizeCanvas.getContext('2d').drawImage(originalCanvas, 0, 0);
+                    }
+                }
+            };
+
+            // 更新预览Canvas（从原始Canvas复制并缩放）
+            const updatePreviewCanvas = (originalCanvas, previewCanvas) => {
+                const ctx = previewCanvas.getContext('2d');
+                // 清除预览Canvas
+                ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                // 从原始Canvas绘制缩放后的内容
+                ctx.drawImage(
+                    originalCanvas, 
+                    0, 0, originalCanvas.width, originalCanvas.height,
+                    0, 0, previewCanvas.width, previewCanvas.height
+                );
+            };
+
+            // 处理图片格式选择
+            let picTypeInputs = document.getElementsByClassName("pic-type");
+            for (let i = 0; i < picTypeInputs.length; i++) {
+                let item = picTypeInputs[i];
+                item.addEventListener('change', () => {
+                    let picQuality = $("#pic-quality-div");
+                    picQuality.style.display = "none";
+                    
+                    if (item.checked) {
+                        configInputSetting["pic-type"] = item.value;
+                        // 只有JPEG和WebP格式显示质量设置
+                        if ("image/webp" === item.value || "image/jpeg" === item.value) {
+                            picQuality.style.display = "";
+                        }
+                        
+                        // 更新所有预览
+                        allCanvas.forEach(({originalCanvas, img, canvas}) => {
+                            drawText(originalCanvas, img, canvas);
+                        });
+                    }
+                });
+            }
+            // 初始化图片格式
+            configInputSetting["pic-type"] = "image/png";
+
+            // 处理图片上传
+            image.addEventListener('change', function () {
+                // 处理批量图片
+                const batchFileHandler = file => {
+                    const type = file.type;
+                    if (!['image/png', 'image/jpeg', 'image/webp'].includes(type)) {
+                        return alert('仅支持 png, jpg, webp 图片格式');
+                    }
+                    readFile(file);
+                };
+                
+                // 清空现有内容（如果是首次上传）
+                if (allCanvas.length === 0) {
+                    graph.innerHTML = '';
+                }
+                
+                [...this.files].forEach(batchFileHandler);
+            });
+
+            // 支持拖放上传
+            const dropArea = document.querySelector('label[for="image"]');
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                dropArea.classList.add('border-primary', 'bg-primary/5');
+            }
+
+            function unhighlight() {
+                dropArea.classList.remove('border-primary', 'bg-primary/5');
+            }
+
+            dropArea.addEventListener('drop', handleDrop, false);
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                // 处理拖放的文件
+                const batchFileHandler = file => {
+                    const type = file.type;
+                    if (!['image/png', 'image/jpeg', 'image/webp'].includes(type)) {
+                        return alert('仅支持 png, jpg, webp 图片格式');
+                    }
+                    readFile(file);
+                };
+                
+                // 清空现有内容（如果是首次上传）
+                if (allCanvas.length === 0) {
+                    graph.innerHTML = '';
+                }
+                
+                [...files].forEach(batchFileHandler);
+            }
+
+            // 水印文字输入事件
+            configInputSetting["text"] = $('#text');
+            configInputSetting["text"].addEventListener('input', () => {
+                allCanvas.forEach(({originalCanvas, img, canvas}) => {
+                    drawText(originalCanvas, img, canvas);
+                });
+            });
+
+            // 字体选择事件
+            configInputSetting["fontSelect"] = $('#fontSelect');
+            configInputSetting["fontSelect"].addEventListener('change', () => {
+                allCanvas.forEach(({originalCanvas, img, canvas}) => {
+                    drawText(originalCanvas, img, canvas);
+                });
+            });
+
+            // 颜色变化事件（更新预览）
+            $('#color').addEventListener('input', () => {
+                $('#color-preview').style.backgroundColor = $('#color').value;
+            });
+            // 初始化颜色预览
+            $('#color-preview').style.backgroundColor = $('#color').value;
+
+            // 缩放控制事件
+            zoomLevel.addEventListener('input', () => {
+                setZoomLevel(parseInt(zoomLevel.value));
+            });
+
+            // 处理所有输入项的变化事件
+            inputItems.forEach(item => {
+                let el = $('#' + item);
+                configInputSetting[item] = el;
+                
+                // 更新标签显示
+                let labelDom = $("#label-" + item);
+                if (labelDom) {
+                    labelDom.innerText = isNaN(el.value) ? el.value : parseFloat(el.value).toFixed(2);
+                }
+                
+                // 添加输入事件监听
+                el.addEventListener('input', () => {
+                    if (labelDom) {
+                        labelDom.innerText = isNaN(el.value) ? el.value : parseFloat(el.value).toFixed(2);
+                    }
+                    
+                    // 重新绘制所有水印
+                    allCanvas.forEach(({originalCanvas, img, canvas}) => {
+                        drawText(originalCanvas, img, canvas);
+                    });
+                });
+            });
+
+            // 点击模态框外部关闭
+            fullsizeModal.addEventListener('click', (e) => {
+                if (e.target === fullsizeModal) {
+                    closeFullsizePreview();
+                }
+            });
+
+            // 键盘快捷键
+            document.addEventListener('keydown', (e) => {
+                // 只有在模态框打开时才响应快捷键
+                if (!fullsizeModal.classList.contains('hidden')) {
+                    switch(e.key) {
+                        case 'Escape':
+                            closeFullsizePreview();
+                            break;
+                        case '+':
+                        case '=':
+                            zoomIn();
+                            e.preventDefault();
+                            break;
+                        case '-':
+                            zoomOut();
+                            e.preventDefault();
+                            break;
                     }
                 }
             });
-        }
-
-        image.addEventListener('change', function () {
-            // 处理批量图片
-            const batchFileHandler = file => {
-                const type = file.type;
-                if (!['image/png', 'image/jpeg', 'image/webp'].includes(type)) {
-                    return alert('仅支持 png, jpg, webp 图片格式');
-                }
-                readFile(file);
-            };
-            [...this.files].forEach(batchFileHandler);
-        });
-
-        configInputSetting["text"] = $('#text');
-        configInputSetting["text"].addEventListener('input', () => {
-            allCanvas.forEach(({canvas, img}) => drawText(canvas, img));
-        });
-
-        configInputSetting["fontSelect"] = $('#fontSelect');
-        configInputSetting["fontSelect"].addEventListener('change', () => {
-            allCanvas.forEach(({canvas, img}) => drawText(canvas, img));
-        });
-
-        inputItems.forEach(item => {
-            let el = $('#' + item);
-            configInputSetting[item] = el;
-            let labelDom = "#label-" + item;
-            $(labelDom) ? $(labelDom).innerText = isNaN(el.value) ? el.value : parseFloat(el.value).toFixed(2) : "";
-            return el.addEventListener('input', () => {
-                $(labelDom) ? $(labelDom).innerText = isNaN(el.value) ? el.value : parseFloat(el.value).toFixed(2) : "";
-                allCanvas.forEach(({canvas, img}) => {
-                    drawText(canvas, img);
-                });
-            });
         });
     </script>
-</div>
+</body>
 </html>
+    
